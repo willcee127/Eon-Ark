@@ -2382,7 +2382,7 @@ let chartInst = null;
 const SUPABASE_URL = 'https://hyrpasuuzjtfqzphfouy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cnBhc3V1emp0ZnF6cGhmb3V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYwNTcsImV4cCI6MjA4OTAwMjA1N30.mlh2pwAn-0hS6aT-3ZIX9XvPa9MBFeIy-cudDSuJ8Ck';
 
- const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 //
 // Each function below has a // SUPABASE REPLACE comment showing the exact
 // call that replaces the demo simulation. See eonark_impl_guide.docx Step 2.
