@@ -3043,10 +3043,45 @@ async function sendChat(){
   const query = input.value.trim();
   if(!query) return;
   if(!STATE.panels.length){ showToast('Upload reports first','warn'); return; }
-  // Backend proxy handles API key - no need for user to provide one
-
   input.value = '';
   document.getElementById('chat-suggestions').style.display = 'none';
+  CHAT_HISTORY.push({ role:'user', content: query });
+  CHAT_HISTORY.push({ role:'typing', content:'' });
+  renderChatMessages();
+  const { facts, profileStr } = buildGroundedContext(query);
+  const systemPrompt = `You are Chronos, the health intelligence engine inside Eon Ark. You analyze a user's personal lab data and explain it clearly.
+CRITICAL RULES:
+1. Only make claims about values explicitly listed in the DATA BLOCK below. Never invent values.
+2. Every specific claim must include a citation: <cite>[marker · date · value unit]</cite>
+3. If fewer than 3 data points exist for a trend, say so explicitly.
+4. If a marker isn't in the data, say so clearly.
+5. Format with <h4> headers and <ul><li> lists.
+6. End with: "This is health education, not medical advice."
+USER PROFILE: ${profileStr || 'Not specified'}
+DATA BLOCK:
+${facts || 'No relevant marker data found.'}`;
+  try {
+    const r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: CHAT_HISTORY.filter(m=>m.role==='user'||m.role==='assistant').slice(-6).map(m=>({role:m.role==='ai'?'assistant':m.role, content:m.content_raw||m.content}))
+      })
+    });
+    const data = await r.json();
+    let text = data.content?.[0]?.text || 'No response received.';
+    text = text.replace(/<cite>(.*?)<\/cite>/g, (_,c)=>`<cite onclick="highlightMarkerFromCite('${c.replace(/'/g,"\\'")}')">${c}</cite>`);
+    CHAT_HISTORY = CHAT_HISTORY.filter(m=>m.role!=='typing');
+    CHAT_HISTORY.push({ role:'ai', content: text, content_raw: data.content?.[0]?.text||'' });
+  } catch(e){
+    CHAT_HISTORY = CHAT_HISTORY.filter(m=>m.role!=='typing');
+    CHAT_HISTORY.push({ role:'ai', content:`<span class="no-data">Error: ${e.message}</span>` });
+  }
+  renderChatMessages();
+}
 
   // Add user message
   CHAT_HISTORY.push({ role:'user', content: query });
