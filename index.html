@@ -481,8 +481,6 @@ canvas.dp-canvas { max-height: 100px !important; }
 .section-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
 
 /* ── API KEY ── */
-.api-key-input { width: 100%; padding: 8px 10px; background: rgba(0,0,0,.25); border: 1px solid var(--border); border-radius: var(--r-sm); font-family: var(--mono); font-size: 11px; outline: none; color: var(--ink); transition: border-color .15s; }
-.api-key-input:focus { border-color: var(--green); }
 .disclaimer { font-size: 10px; color: var(--body); line-height: 1.6; padding: 10px 12px; background: var(--amber-light); border: 1px solid var(--amber-mid); border-radius: var(--r-sm); margin-top: 10px; }
 
 @media (max-width: 700px) {
@@ -1588,7 +1586,7 @@ body::before {
   #auth-screen, #nav, #sidebar, #overlay, #toast,
   .upgrade-banner, .export-bar, .yoy-filter-row,
   .nav-btn, .user-btn, .clear-btn, .btn-sm, .btn-primary,
-  .sample-btn, .api-key-input, #key-status, #drop-zone,
+  .sample-btn, #drop-zone,
   .s-label, #upload-log-section, .tabs .tab,
   #tab-markers, #tab-notes, #tab-insights { display: none !important; }
 
@@ -1777,14 +1775,7 @@ body::before {
     <div id="upload-log"></div>
   </div>
 
-  <hr class="s-divider">
-  <div>
-    <div class="s-label">AI image parsing</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.6">Add your <a href="https://console.anthropic.com" target="_blank">Anthropic API key</a> to parse photos or scanned PDFs.</div>
-    <input class="api-key-input" id="api-key" type="password" placeholder="sk-ant-…" oninput="saveKey(this.value)">
-    <div id="key-status" style="font-size:10px;margin-top:4px;color:var(--muted)"></div>
   </div>
-</div>
 
 <!-- CONTENT -->
 <div id="content">
@@ -2590,8 +2581,7 @@ function loginUser(displayName, opts={}){
   document.getElementById('user-name-nav').textContent = displayName;
   if(!opts.skipLoad) load();
   renderAll();
-  const k=getKey();if(k){document.getElementById('api-key').value=k;saveKey(k);}
-}
+  }
 
 function showAuthError(msg){showToast(msg,'warn');}
 
@@ -2723,8 +2713,6 @@ dz.addEventListener('drop',async e=>{e.preventDefault();dz.classList.remove('dra
 
 async function processFile(file){
   if(isImg(file)){
-    const key=getKey();
-    if(!key){showToast('Add an API key to parse image files','warn');return;}
     showOverlay(file.name);
     try{const b64=await toB64(file);const vm=await visionParse(b64,file.type||'image/jpeg');await ingest('',{...vm,visionMarkers:vm.markers},file.name);}
     catch(e){hideOverlay();showToast('Image parse failed: '+e.message,'warn');}
@@ -2747,16 +2735,13 @@ async function visionParse(b64,mt){
     'For ref_low and ref_high: extract the numeric bounds from the printed reference range ' +
     '(e.g. "65-99 mg/dL" -> ref_low:65, ref_high:99). Use null if no reference range is printed. ' +
     'Include every marker on the report including any flagged H or L.';
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+  const r = await fetch('/api/chat', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': getKey(),
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 2000,
       messages: [{
         role: 'user',
@@ -2914,7 +2899,7 @@ function getChatSuggestions(){
 function renderIntelligence(){
   if(STATE.activeView !== 'intel') return;
   const warn = document.getElementById('chat-key-warn');
-  if(warn) warn.style.display = getKey() ? 'none' : 'block';
+  if(warn) warn.style.display = 'none';
 
   // Render suggestion chips
   const sc = document.getElementById('chat-suggestions');
@@ -3096,7 +3081,7 @@ ${facts || 'No relevant marker data found for this query.'}`;
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-6',
+        model:'claude-sonnet-4-20250514',
         max_tokens:1000,
         system: systemPrompt,
         messages:[
@@ -3693,8 +3678,6 @@ function load(){
   // }
   // ───────────────────────────────────────────────────────────────────
 }
-function saveKey(v){try{localStorage.setItem('eonarkapikey',v.trim());}catch(e){}const st=document.getElementById('key-status');if(v.trim().startsWith('sk-ant-')){st.textContent='✓ Key saved';st.style.color='var(--green)';}else if(v.trim()){st.textContent='Should start sk-ant-…';st.style.color='var(--amber)';}else st.textContent='';}
-function getKey(){try{return localStorage.getItem('eonarkapikey')||'';}catch(e){return '';}}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 // Set today's date in log form
